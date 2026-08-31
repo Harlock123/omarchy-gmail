@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "lwatson.gmail",
+  "name": "Gmail",
+  "version": "2.0.0",
+  "author": "lwatson",
+  "license": "MIT",
+  "description": "Unread Gmail count in the bar via IMAP IDLE, with a dropdown of recent unread messages that open in the browser.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Gmail",
+    "description": "Shows unread Gmail count and opens recent messages in the browser.",
+    "category": "Communication",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "maxMessages": 10,
+      "hideWhenEmpty": false,
+      "browserClass": "edge|chrome|chromium|brave|firefox|librewolf|zen|vivaldi|opera"
+    },
+    "schema": [
+      {
+        "key": "maxMessages",
+        "type": "integer",
+        "label": "Messages in dropdown",
+        "min": 1,
+        "max": 50,
+        "step": 1,
+        "defaultValue": 10
+      },
+      {
+        "key": "hideWhenEmpty",
+        "type": "boolean",
+        "label": "Hide the icon when there is no unread mail",
+        "defaultValue": false
+      },
+      {
+        "key": "browserClass",
+        "type": "string",
+        "label": "Browser window-class pattern (refresh on focus leaving it)",
+        "defaultValue": "edge|chrome|chromium|brave|firefox|librewolf|zen|vivaldi|opera"
+      }
+    ]
+  }
+}

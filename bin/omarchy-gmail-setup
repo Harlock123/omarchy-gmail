@@ -1,0 +1,245 @@
+#!/bin/bash
+# Connect the Gmail bar widget to a Google account using an app password.
+# The password goes into the login keyring; only the address is written to disk.
+
+set -uo pipefail
+
+CONFIG="$HOME/.config/omarchy/gmail.json"
+FALLBACK="$HOME/.config/omarchy/gmail-password"
+HELPER="$HOME/.config/omarchy/plugins/lwatson.gmail/gmail-fetch.py"
+SERVICE="omarchy-gmail"
+
+bold() { printf '\033[1m%s\033[0m\n' "$1"; }
+warn() { printf '\033[33m%s\033[0m\n' "$1"; }
+fail() { printf '\033[31m%s\033[0m\n' "$1"; }
+ok()   { printf '\033[32m%s\033[0m\n' "$1"; }
+
+current_email() {
+  [[ -f $CONFIG ]] || return 0
+  python3 -c "import json,sys
+try:
+    print(json.load(open('$CONFIG')).get('email',''))
+except Exception:
+    print('')" 2>/dev/null
+}
+
+show_status() {
+  local addr; addr=$(current_email)
+  if [[ -z $addr ]]; then
+    echo "No Gmail account configured."
+    return 1
+  fi
+  echo "Account:  $addr"
+  if secret-tool lookup service "$SERVICE" account "$addr" >/dev/null 2>&1; then
+    echo "Password: stored in the login keyring"
+  elif [[ -f $FALLBACK ]]; then
+    echo "Password: stored in $FALLBACK"
+  else
+    warn "Password: MISSING — re-run omarchy-gmail-setup"
+    return 1
+  fi
+  echo
+  echo "Live check:"
+  python3 "$HELPER" 3 | python3 -m json.tool
+}
+
+remove_account() {
+  local addr; addr=$(current_email)
+  if [[ -n $addr ]]; then
+    secret-tool clear service "$SERVICE" account "$addr" 2>/dev/null
+  fi
+  rm -f "$CONFIG" "$FALLBACK"
+  ok "Gmail account removed."
+}
+
+arg_email=""
+arg_index=""
+password_stdin=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --status|-s) show_status; exit $? ;;
+    --remove|-r) remove_account; exit 0 ;;
+    --email) arg_email="${2:-}"; shift 2 ;;
+    --index) arg_index="${2:-}"; shift 2 ;;
+    --password-stdin) password_stdin=1; shift ;;
+    --help|-h)
+      cat <<'USAGE'
+Usage: omarchy-gmail-setup [options]
+
+  (no args)          connect or re-connect a Gmail account, interactively
+  --status           show the configured account and fetch a live sample
+  --remove           forget the account and delete the stored password
+
+Non-interactive (for scripts):
+  --email ADDR       Gmail address
+  --index N          browser account index (default 0)
+  --password-stdin   read the app password from stdin
+
+Example:
+  pass show gmail-app | omarchy-gmail-setup --email you@gmail.com --password-stdin
+USAGE
+      exit 0 ;;
+    *) fail "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+# Interactive prompts need a real terminal. Running this through a wrapper
+# that supplies no tty (e.g. Claude Code's `!` prefix, or a pipe) made `read`
+# return empty and produced a misleading "not an email address" error.
+if [[ ! -t 0 ]] && [[ $password_stdin -eq 0 || -z $arg_email ]]; then
+  fail "No interactive terminal available."
+  echo
+  echo "Open a terminal window and run:"
+  echo "    omarchy-gmail-setup"
+  echo
+  echo "Avoid typing the app password into an agent/tool prompt — it would be"
+  echo "recorded in that session's transcript."
+  echo
+  echo "To script it instead, supply the values explicitly:"
+  echo "    omarchy-gmail-setup --email you@gmail.com --password-stdin < secret"
+  exit 1
+fi
+
+if [[ ! -f $HELPER ]]; then
+  fail "Gmail plugin helper not found at $HELPER"
+  exit 1
+fi
+
+bold "Connect Gmail to the Omarchy bar"
+echo
+echo "You need a Google app password (not your normal password)."
+echo "Create one at: https://myaccount.google.com/apppasswords"
+echo "This requires 2-Step Verification to be enabled on the account."
+echo
+
+if [[ -n $arg_email ]]; then
+  address=$arg_email
+else
+  default_email=$(current_email)
+  if [[ -n $default_email ]]; then
+    read -rp "Gmail address [$default_email]: " address
+    address=${address:-$default_email}
+  else
+    read -rp "Gmail address: " address
+  fi
+fi
+
+address=$(printf '%s' "$address" | tr -d '[:space:]')
+if [[ -z $address || $address != *@* ]]; then
+  fail "That does not look like an email address."
+  exit 1
+fi
+
+if [[ $password_stdin -eq 1 ]]; then
+  IFS= read -r password
+else
+  read -rsp "App password (input hidden): " password
+  echo
+fi
+# Google displays app passwords in four spaced groups; accept either form.
+password=$(printf '%s' "$password" | tr -d '[:space:]')
+if [[ -z $password ]]; then
+  fail "No password entered."
+  exit 1
+fi
+if [[ ${#password} -ne 16 ]]; then
+  warn "Note: app passwords are normally 16 characters; got ${#password}. Continuing anyway."
+fi
+
+if [[ -n $arg_index ]]; then
+  user_index=$arg_index
+elif [[ -t 0 ]]; then
+  read -rp "Gmail account index in the browser (0 unless you use multi-login) [0]: " user_index
+  user_index=${user_index:-0}
+else
+  user_index=0
+fi
+[[ $user_index =~ ^[0-9]+$ ]] || user_index=0
+
+echo
+echo "Verifying with imap.gmail.com…"
+verify_output=$(GMAIL_ADDR="$address" GMAIL_PASS="$password" python3 - <<'PYVERIFY'
+import imaplib, os, sys
+addr = os.environ["GMAIL_ADDR"]
+pw = os.environ["GMAIL_PASS"]
+try:
+    imap = imaplib.IMAP4_SSL("imap.gmail.com", 993, timeout=20)
+    imap.login(addr, pw)
+    imap.select("INBOX", readonly=True)
+    status, data = imap.uid("SEARCH", None, "UNSEEN")
+    count = len((data[0] or b"").split()) if status == "OK" else 0
+    imap.logout()
+    print("OK %d" % count)
+except imaplib.IMAP4.error as exc:
+    detail = exc.args[0] if exc.args else exc
+    if isinstance(detail, bytes):
+        detail = detail.decode("utf-8", "replace")
+    text = str(detail)
+    if "AUTHENTICATIONFAILED" in text.upper():
+        print("ERR Gmail rejected that address/app-password pair.")
+    else:
+        print("ERR %s" % text)
+    sys.exit(1)
+except Exception as exc:
+    print("ERR %s" % exc)
+    sys.exit(1)
+PYVERIFY
+)
+
+if [[ $verify_output != OK* ]]; then
+  fail "${verify_output#ERR }"
+  echo
+  echo "Common causes:"
+  echo "  - the password was a normal account password, not an app password"
+  echo "  - 2-Step Verification is off, so app passwords are unavailable"
+  echo "  - the app password was revoked"
+  exit 1
+fi
+
+unread_now=${verify_output#OK }
+ok "Connected. $unread_now unread message(s) in the inbox right now."
+
+stored=0
+if secret-tool store --label="Omarchy Gmail ($address)" \
+     service "$SERVICE" account "$address" <<<"$password" 2>/dev/null; then
+  stored=1
+  ok "App password saved to the login keyring."
+else
+  warn "Could not write to the keyring."
+  read -rp "Store it in $FALLBACK with 0600 permissions instead? [y/N] " answer
+  if [[ ${answer,,} == y* ]]; then
+    umask 077
+    printf '%s' "$password" > "$FALLBACK"
+    chmod 600 "$FALLBACK"
+    stored=1
+    ok "App password saved to $FALLBACK (0600)."
+  fi
+fi
+
+if [[ $stored -ne 1 ]]; then
+  fail "No password stored; the widget will not be able to sign in."
+  exit 1
+fi
+
+mkdir -p "$(dirname "$CONFIG")"
+python3 - "$CONFIG" "$address" "$user_index" <<'PYWRITE'
+import json, sys
+path, address, index = sys.argv[1], sys.argv[2], int(sys.argv[3])
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump({"email": address, "userIndex": index}, handle, indent=2)
+    handle.write("\n")
+PYWRITE
+chmod 600 "$CONFIG"
+ok "Account written to $CONFIG"
+
+if command -v omarchy-shell >/dev/null 2>&1; then
+  omarchy-shell "lwatson.gmail" refresh >/dev/null 2>&1 \
+    && ok "Bar widget refreshed." \
+    || warn "Could not refresh the widget over IPC; it will pick this up on its next poll."
+fi
+
+echo
+bold "Done."
+echo "If the icon is not in your bar yet, add it with:"
+echo "  omarchy plugin enable lwatson.gmail"
