@@ -9,15 +9,15 @@ messages that open directly in the browser.
 omarchy plugin add https://github.com/Harlock123/omarchy-gmail.git --enable --yes
 ```
 
-That clones the plugin into `~/.config/omarchy/plugins/lwatson.gmail/` and adds
+That clones the plugin into `~/.config/omarchy/plugins/harlock123.gmail/` and adds
 the widget to your bar. Then put the setup command on your `PATH`:
 
 ```bash
-install -m 0755 ~/.config/omarchy/plugins/lwatson.gmail/bin/omarchy-gmail-setup ~/.local/bin/
+install -m 0755 ~/.config/omarchy/plugins/harlock123.gmail/bin/omarchy-gmail-setup ~/.local/bin/
 ```
 
-Update later with `omarchy plugin update lwatson.gmail`, remove with
-`omarchy plugin remove lwatson.gmail`.
+Update later with `omarchy plugin update harlock123.gmail`, remove with
+`omarchy plugin remove harlock123.gmail`.
 
 ### Requirements
 
@@ -60,7 +60,7 @@ Only the address and account index are written to `~/.config/omarchy/gmail.json`
 Set these inline on the widget's entry in `~/.config/omarchy/shell.json`:
 
 ```json
-{ "id": "lwatson.gmail", "maxMessages": 10, "hideWhenEmpty": false }
+{ "id": "harlock123.gmail", "maxMessages": 10, "hideWhenEmpty": false }
 ```
 
 - `maxMessages` — rows in the dropdown, 1–50 (default 10)

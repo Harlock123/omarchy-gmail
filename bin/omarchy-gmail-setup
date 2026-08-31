@@ -6,7 +6,7 @@ set -uo pipefail
 
 CONFIG="$HOME/.config/omarchy/gmail.json"
 FALLBACK="$HOME/.config/omarchy/gmail-password"
-HELPER="$HOME/.config/omarchy/plugins/lwatson.gmail/gmail-fetch.py"
+HELPER="$HOME/.config/omarchy/plugins/harlock123.gmail/gmail-fetch.py"
 SERVICE="omarchy-gmail"
 
 bold() { printf '\033[1m%s\033[0m\n' "$1"; }
@@ -234,7 +234,7 @@ chmod 600 "$CONFIG"
 ok "Account written to $CONFIG"
 
 if command -v omarchy-shell >/dev/null 2>&1; then
-  omarchy-shell "lwatson.gmail" refresh >/dev/null 2>&1 \
+  omarchy-shell "harlock123.gmail" refresh >/dev/null 2>&1 \
     && ok "Bar widget refreshed." \
     || warn "Could not refresh the widget over IPC; it will pick this up on its next poll."
 fi
@@ -242,4 +242,4 @@ fi
 echo
 bold "Done."
 echo "If the icon is not in your bar yet, add it with:"
-echo "  omarchy plugin enable lwatson.gmail"
+echo "  omarchy plugin enable harlock123.gmail"

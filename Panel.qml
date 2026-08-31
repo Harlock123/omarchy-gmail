@@ -9,8 +9,8 @@ import "Model.js" as Model
 
 Panel {
   id: root
-  moduleName: "lwatson.gmail"
-  ipcTarget: "lwatson.gmail"
+  moduleName: "harlock123.gmail"
+  ipcTarget: "harlock123.gmail"
   manageIpc: false
 
   // "messages" while the cursor is on a row, "inbox" on the footer action.

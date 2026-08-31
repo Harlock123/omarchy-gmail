@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "lwatson.gmail",
+  "id": "harlock123.gmail",
   "name": "Gmail",
   "version": "2.0.0",
-  "author": "lwatson",
+  "author": "Harlock123",
   "license": "MIT",
   "description": "Unread Gmail count in the bar via IMAP IDLE, with a dropdown of recent unread messages that open in the browser.",
   "kinds": [
