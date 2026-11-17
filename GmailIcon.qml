@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.Commons
+import qs.Commons as Commons
 
 // Envelope drawn as vector art rather than a font glyph, so the widget does
 // not depend on the user's font shipping a mail codepoint. The unread badge
@@ -9,10 +10,10 @@ Item {
   id: root
 
   property real iconSize: Style.font.icon
-  property color color: Color.foreground
+  property color color: Commons.Color.foreground
   property int badgeCount: 0
-  property color badgeColor: Color.accent
-  property color badgeTextColor: Color.background
+  property color badgeColor: Commons.Color.accent
+  property color badgeTextColor: Commons.Color.background
   property string fontFamily: Style.font.family
 
   readonly property real envelopeWidth: iconSize * 1.3

@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
@@ -20,9 +21,9 @@ Panel {
   // Drives relative timestamps without each row owning a timer.
   property double nowMs: Date.now()
 
-  readonly property color foreground: bar ? bar.foreground : Color.foreground
-  readonly property color urgent: bar ? bar.urgent : Color.urgent
-  readonly property color accent: Color.accent
+  readonly property color foreground: bar ? bar.foreground : Commons.Color.foreground
+  readonly property color urgent: bar ? bar.urgent : Commons.Color.urgent
+  readonly property color accent: Commons.Color.accent
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
   readonly property var messages: gmail.messages || []
@@ -185,7 +186,7 @@ Panel {
           fontFamily: root.fontFamily
           badgeCount: root.problem ? 0 : gmail.unread
           badgeColor: root.accent
-          badgeTextColor: Color.background
+          badgeTextColor: Commons.Color.background
           opacity: gmail.loading && !gmail.hasLoadedOnce ? 0.5 : 1.0
         }
       }

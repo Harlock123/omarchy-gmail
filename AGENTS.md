@@ -59,6 +59,9 @@ The number is the maximum messages to list, clamped to 0..50 (default 10).
 - **Deep links.** Message URLs use the hex form of Gmail's `X-GM-THRID`, which is what the Gmail web UI uses.
 - **`bin/omarchy-gmail-setup` is tracked** even though `.gitignore` lists its name, so edits to it show up in git
   as normal.
+- **Qualify the palette as `Commons.Color`.** Qt 6.12's QtQuick has its own `Color` type that shadows the shell's
+  `qs.Commons` singleton, so a bare `Color.foreground` is `undefined` there. Import `qs.Commons as Commons` alongside
+  `qs.Commons` and write `Commons.Color.x`, as upstream Omarchy does since omacom/omarchy#14553.
 
 ## Making a change
 
